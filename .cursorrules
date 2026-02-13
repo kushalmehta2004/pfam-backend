@@ -1,0 +1,35 @@
+You are building PFAM — Profit-First Ad Manager. A multi-tenant SaaS that connects
+Shopify + Meta Ads + Google Ads, calculates true net profit per campaign, and
+automatically pauses unprofitable campaigns.
+
+STACK: Next.js 14 (App Router) frontend on Vercel. FastAPI (Python 3.12) backend
+on Railway. Neon serverless Postgres. Clerk for auth. Celery + Upstash Redis for
+background jobs. Cloudflare R2 for file storage. Stripe for billing.
+
+CRITICAL RULES — never break these:
+1. All monetary values stored as integers (cents). Never floats for money.
+2. Every DB query MUST include WHERE org_id = :org_id (tenant isolation).
+3. All sync jobs must be idempotent — running twice produces same result, no duplicates.
+4. Audit log is append-only. Never UPDATE or DELETE audit_log rows.
+5. OAuth tokens stored AES-256 encrypted. Never plaintext in DB or logs.
+6. Attribution engine has 5 tiers — implement exactly as specced, do not simplify.
+
+PROFIT FORMULA:
+Net Profit = Attributed Revenue - Ad Spend - Attributed COGS - Estimated Returns - Platform Fees
+
+ATTRIBUTION TIERS:
+Tier 1: Direct click ID match (fbclid / gclid in Shopify UTM) — confidence 0.95
+Tier 2: Conversion ID match (Meta Pixel / Google Tag event) — confidence 0.85
+Tier 3: SKU-weighted attribution (spend proportion on matching SKUs) — confidence 0.70
+Tier 4: Blended attribution (proportional to total spend) — confidence 0.50
+Tier 5: ML model (XGBoost, trained on Tier 1/2 ground truth) — confidence 0.60-0.85
+
+DB SCHEMA RULES:
+- Every table has: id (UUID PK), org_id (UUID FK), created_at, updated_at
+- Use SQLAlchemy 2.0 models + Alembic migrations
+- Neon connection string from env: DATABASE_URL
+
+When implementing any feature, ask for the relevant section of the SRS if not provided.
+Implement exactly what is specced. Do not add unrequested features.
+Always write the Alembic migration before the application code.
+Always add a test for profit calculation logic and attribution logic.
